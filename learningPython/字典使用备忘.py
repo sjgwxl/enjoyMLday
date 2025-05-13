@@ -1,0 +1,9 @@
+pro1={"key1":1,"key2":"2","key3":3.1,(1.2,3):"1"}
+pro2={"key1":3,"key2":"1","key3":2.1,(1.2,3):"9"}
+DICT={}
+DICT["pro1"]=pro1
+DICT["pro2"]=pro2
+print(DICT)
+#删除字典里面子字典的特定key
+del(DICT["pro1"][(1.2,3)])
+print(DICT)
