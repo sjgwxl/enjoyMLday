@@ -1,13 +1,7 @@
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
-import tensorflow.keras.models
 import logging ,os,matplotlib
-matplotlib.use('TkAgg')  # 使用Tkinter后端
 from PIL import Image
-logging.getLogger("tensorflow").setLevel(logging.ERROR)
-tf.autograph.set_verbosity(0)
-
 
 def load_20x20_grayscale_images(directory):
     """
@@ -130,6 +124,42 @@ def getTestPic(file_path):
     img_array = np.array(resized_img, dtype=np.float32) / 255.0
     return img_array
 
+def sigmoid(z):
+    result = 1/(1+np.exp(-z))
+    return result
+
+def my_dense(a_in, W, b, g):
+    """
+    Computes dense layer
+    Args:
+      a_in (ndarray (n, )) : Data, 1 example
+      W    (ndarray (n,j)) : Weight matrix, n features per unit, j units
+      b    (ndarray (j, )) : bias vector, j units
+      g    activation function (e.g. sigmoid, relu..)
+    Returns
+      a_out (ndarray (j,))  : j units
+    """
+    units = W.shape[1]
+    a_out = np.zeros(units)
+
+    for j in range(units):
+        #取出第j列
+        w = W[:,j]
+        z = np.dot(a_in,w) + b[j]
+        a_out[j] = g(z)
+
+    # 矢量化写法更加便捷
+    # x = X[0].reshape(-1, 1)  # column vector (400,1)
+    # z1 = np.matmul(x.T, W1) + b1  # (1,400)(400,25) = (1,25)
+    # a1 = sigmoid(z1)
+
+    return(a_out)
+
+def my_sequential(x, W1, b1, W2, b2, W3, b3):
+    a1 = my_dense(x,  W1, b1, sigmoid)
+    a2 = my_dense(a1, W2, b2, sigmoid)
+    a3 = my_dense(a2, W3, b3, sigmoid)
+    return(a3)
 
 if __name__ == "__main__":
     X,name = load_20x20_grayscale_images("D:\\ZK_WORK\\working\\PyCharmProject\\learningPython\\训练集\\out")
@@ -146,72 +176,35 @@ if __name__ == "__main__":
     print(f"type(X):{type(X)}")
     m,n = X.shape
 
-    # display_flattened_images(X, name, images_per_row=10) #图形显示可以略
+    # Quick Check
+    x_tst = 0.1 * np.arange(1, 3, 1).reshape(2, )  # (1 examples, 2 features)
+    W_tst = 0.1 * np.arange(1, 7, 1).reshape(2, 3)  # (2 input features, 3 output features)
+    b_tst = 0.1 * np.arange(1, 4, 1).reshape(3, )  # (3 features)
+    A_tst = my_dense(x_tst, W_tst, b_tst, sigmoid)
+    print(A_tst)
 
-    #构建模型
-    model = tensorflow.keras.models.Sequential(
-        [
-            tf.keras.Input(shape=(400,)),
-            tensorflow.keras.layers.Dense(25,activation="sigmoid"),
-            tensorflow.keras.layers.Dense(15, activation="sigmoid"),
-            tensorflow.keras.layers.Dense(1, activation="sigmoid")
-        ], name = "my_model"
-    )
-
-    #模型参数确认
-    model.summary()
-    L1_num_params = 400 * 25 + 25  # W1 parameters  + b1 parameters
-    L2_num_params = 25 * 15 + 15  # W2 parameters  + b2 parameters
-    L3_num_params = 15 * 1 + 1  # W3 parameters  + b3 parameters
-    print("L1 params = ", L1_num_params, ", L2 params = ", L2_num_params, ",  L3 params = ", L3_num_params)
-
-    #层具体参数确认
-    [layer1, layer2, layer3] = model.layers
-    W1, b1 = layer1.get_weights()
-    W2, b2 = layer2.get_weights()
-    W3, b3 = layer3.get_weights()
+    #假设已经完成训练，拿到推理所需的参数，由于真实参数太多，此处用0初始化验证流程正确
+    W1 = np.zeros(shape=(400,25))
+    W2 = np.zeros(shape=(25,15))
+    W3 = np.zeros(shape=(15,1))
+    b1 = np.zeros(shape=(25,))
+    b2 = np.zeros(shape=(15,))
+    b3 = np.zeros(shape=(1,))
     print(f"W1 shape = {W1.shape}, b1 shape = {b1.shape}")
     print(f"W2 shape = {W2.shape}, b2 shape = {b2.shape}")
     print(f"W3 shape = {W3.shape}, b3 shape = {b3.shape}")
 
-    #模型训练
-    model.compile(
-        loss=tf.keras.losses.BinaryCrossentropy(),
-        optimizer=tf.keras.optimizers.Adam(0.001),
-    )
-    model.fit(
-        X, y,
-        epochs=200
-    )
-
-    W1, b1 = layer1.get_weights()
-    W2, b2 = layer2.get_weights()
-    W3, b3 = layer3.get_weights()
-    print(f"W1:{W1}")
-    print(f"W2:{W2}")
-    print(f"W3:{W3}")
-    print(f"b1:{b1}")
-    print(f"b2:{b2}")
-    print(f"b3:{b3}")
-    #训练完成的模型进行预测试试
-    # prediction = model.predict(X[6].reshape(1, 400))  # a zero
-    # print(f" predicting a one: {prediction}")
-    # prediction = model.predict(X[31].reshape(1, 400))  # a one
-    # print(f" predicting a zero:  {prediction}")
-    # yhat = np.zeros(m)
-    # for idx in range(m):
-    #     pred = model.predict(X[idx].reshape(1, 400))
-    #     if pred >= 0.5:
-    #         yhat[idx] = 1
-    #     else:
-    #         yhat[idx] = 0
-    # print(f"prediction after threshold: {yhat}")
-
-    #用新图像做预测
-    prediction = model.predict(getTestPic("D:\\ZK_WORK\\working\\PyCharmProject\\learningPython\\校验用数据\\0和1识别\\0.png").reshape(1, 400))
+    #以特定参数带入函数，用第一二张图像做预测
+    prediction = my_sequential(X[0], W1, b1, W2, b2, W3, b3)
     if prediction >= 0.5:
         yhat = 1
     else:
         yhat = 0
-    print(f"prediction after threshold: {yhat}")
+    print("yhat = ", yhat, " label= ", y[0, 0])
+    prediction = my_sequential(X[1], W1, b1, W2, b2, W3, b3)
+    if prediction >= 0.5:
+        yhat = 1
+    else:
+        yhat = 0
+    print("yhat = ", yhat, " label= ", y[1, 0])
 
