@@ -1,13 +1,13 @@
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
-import tensorflow.keras.models
-import logging ,os,matplotlib
-matplotlib.use('TkAgg')  # 使用Tkinter后端
+import tensorflow as tf
+import os
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LeakyReLU
+from tensorflow.keras.activations import linear, relu, sigmoid
 from PIL import Image
-logging.getLogger("tensorflow").setLevel(logging.ERROR)
-tf.autograph.set_verbosity(0)
 
+# 三种激活函数：线性激活(f_x=x)、ReLU函数(分段特定打断线性拟合复杂任务)、Sigmoid函数(二元分类使用，只输出0/1)
 
 def load_20x20_grayscale_images(directory):
     """
@@ -130,9 +130,8 @@ def get_test_picture(file_path):
     img_array = np.array(resized_img, dtype=np.float32) / 255.0
     return img_array
 
-
 if __name__ == "__main__":
-    X,name = load_20x20_grayscale_images("D:\\ZK_WORK\\working\\PyCharmProject\\learningPython\\训练集\\out")
+    X, name = load_20x20_grayscale_images("D:\\ZK_WORK\\working\\PyCharmProject\\learningPython\\训练集\\out")
     y = np.array([[1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0],
                   [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0],
                   [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0], [0.0],
@@ -144,64 +143,28 @@ if __name__ == "__main__":
                   ])
     print(f"X.shape:{X.shape},Y.shape{y.shape}")
     print(f"type(X):{type(X)}")
-    m,n = X.shape
+    m, n = X.shape
 
-    display_flattened_images(X, name, images_per_row=10) #图形显示可以略
+    # display_flattened_images(X, name, images_per_row=10)  # 图形显示可以略
 
-    #构建模型
-    model = tensorflow.keras.models.Sequential(
+    # 构建模型
+    model = Sequential(
         [
             tf.keras.Input(shape=(400,)),
-            tensorflow.keras.layers.Dense(25,activation="relu"),
-            tensorflow.keras.layers.Dense(15, activation="relu"),
-            tensorflow.keras.layers.Dense(1, activation="sigmoid")
-        ], name = "my_model"
+            Dense(25, activation="linear"),
+            Dense(15, activation="relu"),
+            Dense(1, activation="sigmoid")
+        ], name="my_model"
     )
 
-    #模型参数确认
-    model.summary()
-    L1_num_params = 400 * 25 + 25  # W1 parameters  + b1 parameters
-    L2_num_params = 25 * 15 + 15  # W2 parameters  + b2 parameters
-    L3_num_params = 15 * 1 + 1  # W3 parameters  + b3 parameters
-    print("L1 params = ", L1_num_params, ", L2 params = ", L2_num_params, ",  L3 params = ", L3_num_params)
-
-    #层具体参数确认
-    [layer1, layer2, layer3] = model.layers
-    W1, b1 = layer1.get_weights()
-    W2, b2 = layer2.get_weights()
-    W3, b3 = layer3.get_weights()
-    print(f"W1 shape = {W1.shape}, b1 shape = {b1.shape}")
-    print(f"W2 shape = {W2.shape}, b2 shape = {b2.shape}")
-    print(f"W3 shape = {W3.shape}, b3 shape = {b3.shape}")
-
-    #模型训练
+    # 模型编译选择损失函数
     model.compile(
         loss=tf.keras.losses.BinaryCrossentropy(),
         optimizer=tf.keras.optimizers.Adam(0.001),
     )
+
+    # 模型训练
     model.fit(
         X, y,
-        epochs=200
+        epochs=100
     )
-
-    W1, b1 = layer1.get_weights()
-    W2, b2 = layer2.get_weights()
-    W3, b3 = layer3.get_weights()
-    #训练完成的模型进行预测试试
-    # prediction = model.predict(X[6].reshape(1, 400))  # a zero
-    # print(f" predicting a one: {prediction}")
-    # prediction = model.predict(X[31].reshape(1, 400))  # a one
-    # print(f" predicting a zero:  {prediction}")
-    # yhat = np.zeros(m)
-    # for idx in range(m):
-    #     pred = model.predict(X[idx].reshape(1, 400))
-    #     if pred >= 0.5:
-    #         yhat[idx] = 1
-    #     else:
-    #         yhat[idx] = 0
-    # print(f"prediction after threshold: {yhat}")
-
-    #用新图像做预测
-    prediction = model.predict(get_test_picture("D:\\ZK_WORK\\working\\PyCharmProject\\learningPython\\校验用数据\\0和1识别\\1.png").reshape(-1, 400))
-    print(f"prediction after threshold: {prediction}")
-
